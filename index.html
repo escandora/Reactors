@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactor Coil Design Calculator</title>
+    <style>
+        :root {
+            --bg-body: #1a1a2e;
+            --bg-header: linear-gradient(135deg, #16213e, #0f3460);
+            --bg-panel: #0f1a30;
+            --bg-section: #16213e;
+            --bg-section-header: rgba(15, 52, 96, 0.5);
+            --bg-section-header-hover: rgba(15, 52, 96, 0.8);
+            --bg-input: #1a1a2e;
+            --bg-freq-th: rgba(15, 52, 96, 0.6);
+            --bg-row-hover: rgba(255,255,255,0.03);
+            --bg-constraint: rgba(51, 51, 153, 0.1);
+            --border-main: #0f3460;
+            --border-accent: #e94560;
+            --border-input: #2a2a4e;
+            --border-freq: rgba(15, 52, 96, 0.3);
+            --text-primary: #e0e0e0;
+            --text-heading: #fff;
+            --text-label: #a0a0b8;
+            --text-value: #fff;
+            --text-unit: #666;
+            --text-muted: #444;
+            --text-constraint: #7799ff;
+            --text-accent: #e94560;
+            --text-freq-td: #ddd;
+            --text-note: #8888a0;
+        }
+
+        body.light {
+            --bg-body: #f0f2f5;
+            --bg-header: linear-gradient(135deg, #e8eaf0, #cfd4de);
+            --bg-panel: #e0e3ea;
+            --bg-section: #fff;
+            --bg-section-header: rgba(200, 210, 225, 0.6);
+            --bg-section-header-hover: rgba(180, 195, 215, 0.8);
+            --bg-input: #fff;
+            --bg-freq-th: rgba(200, 210, 225, 0.6);
+            --bg-row-hover: rgba(0,0,0,0.03);
+            --bg-constraint: rgba(51, 51, 153, 0.06);
+            --border-main: #c0c8d8;
+            --border-accent: #d03050;
+            --border-input: #bbb;
+            --border-freq: rgba(0,0,0,0.1);
+            --text-primary: #222;
+            --text-heading: #111;
+            --text-label: #555;
+            --text-value: #111;
+            --text-unit: #888;
+            --text-muted: #999;
+            --text-constraint: #2244aa;
+            --text-accent: #d03050;
+            --text-freq-td: #333;
+            --text-note: #666;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            font-size: 14px;
+        }
+
+        header {
+            background: var(--bg-header);
+            padding: 16px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid var(--border-accent);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            color: var(--text-heading);
+            letter-spacing: 1px;
+        }
+
+        header h1 span { color: var(--text-accent); }
+
+        .tab-nav {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tab-btn {
+            background: transparent;
+            color: var(--text-label);
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 8px 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+            border-radius: 0;
+        }
+        .tab-btn { position: relative; }
+        .tab-btn:hover { color: var(--text-heading); border-bottom-color: rgba(233, 69, 96, 0.4); }
+        .tab-btn.active {
+            color: var(--text-heading);
+            border-bottom-color: var(--border-accent);
+            font-weight: 600;
+        }
+        .tab-help {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 13px;
+            height: 13px;
+            font-size: 8px;
+            line-height: 13px;
+            text-align: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            color: var(--text-label);
+            cursor: default;
+            font-weight: 700;
+            font-style: italic;
+            font-family: Georgia, serif;
+        }
+        body.light .tab-help { background: rgba(0,0,0,0.1); }
+        .tab-help:hover .tab-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        .tab-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            top: 120%;
+            right: 0;
+            width: 200px;
+            background: #222;
+            color: #eee;
+            font-size: 11px;
+            font-weight: 400;
+            padding: 6px 8px;
+            border-radius: 4px;
+            line-height: 1.35;
+            z-index: 200;
+            transition: opacity 0.15s;
+            pointer-events: none;
+            white-space: normal;
+        }
+        body.light .tab-tooltip { background: #333; color: #fff; }
+
+        .app-layout {
+            display: flex;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* LEFT INPUT PANEL */
+        .input-panel {
+            width: 340px;
+            min-width: 340px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border-main);
+            padding: 16px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+            position: sticky;
+            top: 60px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-accent);
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+            font-weight: 600;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            gap: 6px;
+        }
+
+        .input-row label {
+            flex: 1;
+            font-size: 0.78rem;
+            color: var(--text-label);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .input-row input, .input-row select {
+            width: 90px;
+            padding: 4px 6px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-input);
+            border-left: 3px solid rgba(255, 0, 0, 0.6);
+            border-radius: 4px;
+            color: var(--text-value);
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82rem;
+            text-align: right;
+        }
+
+        .input-row select {
+            text-align: left;
+            width: 110px;
+            cursor: pointer;
+        }
+
+        .input-row input:focus, .input-row select:focus {
+            outline: none;
+            border-color: var(--border-accent);
+            box-shadow: 0 0 6px rgba(233, 69, 96, 0.3);
+        }
+
+        .input-row .unit {
+            font-size: 0.7rem;
+            color: var(--text-unit);
+            width: 26px;
+            text-align: left;
+        }
+
+        /* MAIN RESULTS AREA */
+        .results-area {
+            flex: 1;
+            padding: 20px 24px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+        }
+
+        .section {
+            background: var(--bg-section);
+            border-radius: 10px;
+            border: 1px solid var(--border-main);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: var(--bg-section-header);
+            padding: 10px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        .section-header:hover { background: var(--bg-section-header-hover); }
+
+        .section-header h3 {
+            font-size: 0.95rem;
+            color: var(--text-accent);
+            font-weight: 600;
+        }
+
+        .section-header .toggle {
+            color: var(--text-unit);
+            font-size: 0.8rem;
+            transition: transform 0.2s;
+        }
+
+        .section-header.collapsed .toggle { transform: rotate(-90deg); }
+
+        .section-body {
+            padding: 12px 16px;
+        }
+
+        .section-body.collapsed { display: none; }
+
+        .result-row {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            margin-bottom: 3px;
+            border-radius: 4px;
+            min-height: 28px;
+        }
+
+        .result-row:hover { background: var(--bg-row-hover); }
+
+        .result-row .r-label {
+            flex: 1;
+            font-size: 0.82rem;
+            color: var(--text-label);
+        }
+
+        .result-row .r-value {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.88rem;
+            color: var(--text-value);
+            text-align: right;
+            min-width: 120px;
+        }
+
+        .result-row .r-unit {
+            font-size: 0.72rem;
+            color: var(--text-unit);
+            width: 60px;
+            text-align: left;
+            padding-left: 6px;
+        }
+
+        /* BLUE constraint styling */
+        .result-row.constraint {
+            border-left: 3px solid rgba(51, 51, 153, 0.8);
+            background: var(--bg-constraint);
+        }
+
+        .result-row.constraint .r-value {
+            color: var(--text-constraint);
+            font-weight: 600;
+        }
+
+        /* Frequency table */
+        .freq-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.78rem;
+        }
+
+        .freq-table th {
+            background: var(--bg-freq-th);
+            padding: 6px 8px;
+            text-align: right;
+            color: var(--text-label);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-main);
+        }
+
+        .freq-table td {
+            padding: 5px 8px;
+            text-align: right;
+            border-bottom: 1px solid var(--border-freq);
+            color: var(--text-freq-td);
+        }
+
+        .freq-table tr:hover td { background: var(--bg-row-hover); }
+
+        /* Two-column results grid */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 24px;
+        }
+
+        .results-grid .result-row { grid-column: span 1; }
+        .results-grid .result-row.full-width { grid-column: span 2; }
+
+        /* Footer note */
+        .note-section {
+            background: var(--bg-section);
+            border-radius: 10px;
+            border: 1px solid var(--border-main);
+            padding: 16px;
+            margin-bottom: 16px;
+            font-size: 0.82rem;
+            color: var(--text-note);
+            line-height: 1.6;
+        }
+
+        .note-section strong { color: var(--text-accent); }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .app-layout { flex-direction: column; }
+            .input-panel {
+                width: 100%;
+                min-width: unset;
+                max-height: unset;
+                position: static;
+                border-right: none;
+                border-bottom: 1px solid var(--border-main);
+            }
+            .results-area { max-height: unset; }
+            .results-grid { grid-template-columns: 1fr; }
+            .results-grid .result-row.full-width { grid-column: span 1; }
+        }
+
+        /* Saved Designs */
+        .saved-designs-container {
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .saved-designs-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(233,69,96,0.12), rgba(233,69,96,0.04));
+            border: 1px solid rgba(233,69,96,0.3);
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-accent);
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .saved-designs-btn:hover {
+            background: linear-gradient(135deg, rgba(233,69,96,0.2), rgba(233,69,96,0.08));
+            border-color: var(--border-accent);
+        }
+        .saved-count {
+            background: var(--border-accent);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 1px 6px;
+            margin-left: 6px;
+            min-width: 18px;
+            text-align: center;
+        }
+        .saved-count:empty { display: none; }
+        .saved-designs-dropdown {
+            display: none;
+            background: var(--bg-section);
+            border: 1px solid var(--border-main);
+            border-radius: 6px;
+            margin-top: 4px;
+            max-height: 240px;
+            overflow-y: auto;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .saved-designs-dropdown .sd-empty {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-label);
+            font-size: 0.78rem;
+        }
+        .saved-designs-dropdown .sd-empty svg { display: block; margin: 0 auto 6px; opacity: 0.4; }
+        .saved-designs-dropdown .sd-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid rgba(128,128,128,0.15);
+            transition: background 0.15s;
+        }
+        .saved-designs-dropdown .sd-item:last-child { border-bottom: none; }
+        .saved-designs-dropdown .sd-item:hover { background: rgba(233,69,96,0.08); }
+        .saved-designs-dropdown .sd-item .sd-name {
+            flex: 1;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .saved-designs-dropdown .sd-item .sd-icon {
+            margin-right: 8px;
+            color: var(--text-accent);
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+        .saved-designs-dropdown .sd-item .sd-delete {
+            color: var(--text-label);
+            font-size: 1rem;
+            padding: 0 4px;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.15s, color 0.15s;
+            line-height: 1;
+        }
+        .saved-designs-dropdown .sd-item .sd-delete:hover { opacity: 1; color: #e94560; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <img src="images/Logos/Acutran-logo-ICON-FULL.png" alt="Acutran" style="height:36px;object-fit:contain;">
+        <h1>Reactors</h1>
+    </div>
+    <nav class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('calculator')">Calculator</button>
+        <button class="tab-btn" onclick="switchTab('ws-existing')">WS - Existing<span class="tab-help">i<span class="tab-tooltip">AI's best guess at creating a winding sheet in the format of the current winding sheet</span></span></button>
+        <button class="tab-btn" onclick="switchTab('ws-ai')">WS - New<span class="tab-help">i<span class="tab-tooltip">New style of winding sheet</span></span></button>
+    </nav>
+    <button id="theme-toggle" onclick="toggleTheme()" style="background:none;border:1px solid #666;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:0.75rem;color:#ccc;">Light</button>
+</header>
+
+<div id="tab-calculator" class="app-layout">
+
+<!-- LEFT INPUT PANEL -->
+<div class="input-panel">
+
+    <div class="saved-designs-container">
+        <button class="saved-designs-btn" onclick="openSavedDesigns()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            Saved Designs
+            <span id="saved-designs-count" class="saved-count"></span>
+            <span id="saved-designs-arrow" style="margin-left:auto;font-size:0.6rem;transition:transform 0.2s;">&#9660;</span>
+        </button>
+        <div id="saved-designs-list" class="saved-designs-dropdown"></div>
+        <div style="margin-top:6px;padding:4px 8px;font-size:0.75rem;color:var(--text-label);">
+            Current Design: <span id="current-design-name" style="font-weight:600;color:var(--text-accent);">Unsaved</span>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <div class="input-group-title">Coil Geometry</div>
+        <div class="input-row">
+            <label>Build Factor</label>
+            <input type="number" id="buildFactor" value="1.11" step="0.01">
+            <span class="unit"></span>
+        </div>
+        <div class="input-row">
+            <label>Coil ID + barrier</label>
+            <input type="number" id="coilID" value="9.75" step="0.25">
+            <span class="unit">in</span>
+        </div>
+        <div class="input-row">
+            <label>No. Layers</label>
+            <input type="number" id="numLayers" value="45" step="1" min="1">
+            <span class="unit"></span>
+        </div>
+        <div class="input-row">
+            <label>Margin</label>
+            <input type="number" id="margin" value="6.0" step="0.5">
+            <span class="unit">in</span>
+        </div>
+        <div class="input-row">
+            <label>Turns/layer</label>
+            <input type="number" id="turnsPerLayer" value="1" step="1" min="1">
+            <span class="unit"></span>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <div class="input-group-title">Conductor</div>
+        <div class="input-row">
+            <label>No. Conductors</label>
+            <input type="number" id="numConductors" value="1" step="1" min="1">
+            <span class="unit"></span>
+        </div>
+        <div class="input-row">
+            <label>Conductor Thickness</label>
+            <input type="number" id="condThickness" value="0.12" step="0.01">
+            <span class="unit">in</span>
+        </div>
+        <div class="input-row">
+            <label>Conductor Width</label>
+            <input type="number" id="condWidth" value="24.0" step="0.5">
+            <span class="unit">in</span>
+        </div>
+        <div class="input-row">
+            <label>Material</label>
+            <select id="material">
+                <option value="0">Aluminum</option>
+                <option value="1">Copper</option>
+            </select>
+            <span class="unit"></span>
+        </div>
+        <div class="input-row">
+            <label>Conductor Gap</label>
+            <input type="number" id="condGap" value="0.01" step="0.001">
+            <span class="unit">in</span>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <div class="input-group-title">Insulation & Cooling</div>
+        <div class="input-row">
+            <label>Layer Insulation</label>
+            <input type="number" id="layerIns" value="0.01" step="0.001">
+            <span class="unit">in</span>
+        </div>
+        <div class="input-row">
+            <label>No. Sticks</label>
+            <input type="number" id="numSticks" value="9" step="1" min="0">
+            <span class="unit"></span>
+        </div>
+        <div class="input-row">
+            <label>Stick Thickness</label>
+            <input type="number" id="stickThickness" value="0.75" step="0.05">
+            <span class="unit">in</span>
+        </div>
+        <div class="input-row">
+            <label>Duct Efficiency</label>
+            <input type="number" id="ductEff" value="0.8" step="0.05" min="0" max="1">
+            <span class="unit"></span>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <div class="input-group-title">Electrical</div>
+        <div class="input-row">
+            <label>DC Amps</label>
+            <input type="number" id="dcAmps" value="0" step="100">
+            <span class="unit">A</span>
+        </div>
+        <div class="input-row">
+            <label>AC Amps</label>
+            <input type="number" id="acAmps" value="4000" step="100">
+            <span class="unit">A</span>
+        </div>
+        <div class="input-row">
+            <label>Test Current</label>
+            <input type="number" id="testCurrent" value="600" step="50">
+            <span class="unit">A</span>
+        </div>
+        <div class="input-row">
+            <label>Target IZ @60Hz</label>
+            <input type="number" id="targetIZ" value="0.2" step="0.01">
+            <span class="unit">&Omega;</span>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <div class="input-group-title">Overload / Fault</div>
+        <div class="input-row">
+            <label>Overload Current</label>
+            <input type="number" id="overloadCurrent" value="30000" step="1000">
+            <span class="unit">A</span>
+        </div>
+        <div class="input-row">
+            <label>Overload Seconds</label>
+            <input type="number" id="overloadSeconds" value="10" step="1">
+            <span class="unit">s</span>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border-main);">
+        <button id="save-btn" onclick="saveDesign()" style="flex:1;background:var(--border-accent);color:#fff;border:none;border-radius:4px;padding:6px 0;cursor:pointer;font-size:0.78rem;font-weight:600;">Save</button>
+        <button onclick="clearAllInputs()" style="flex:1;background:none;border:1px solid #666;border-radius:4px;padding:6px 0;cursor:pointer;font-size:0.78rem;color:var(--text-label);">Clear All</button>
+    </div>
+
+</div>
+
+<!-- MAIN RESULTS AREA -->
+<div class="results-area">
+
+    <!-- EXPAND/COLLAPSE ALL -->
+    <div style="text-align:right;margin-bottom:6px;">
+        <button onclick="toggleAll(false)" style="cursor:pointer;background:#0f3460;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:0.75rem;margin-right:4px;">Expand All</button>
+        <button onclick="toggleAll(true)" style="cursor:pointer;background:#0f3460;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:0.75rem;">Collapse All</button>
+    </div>
+
+    <!-- GEOMETRY -->
+    <div class="section" id="sec-geometry">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Geometry</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row"><span class="r-label">Num Turns (N)</span><span class="r-value" id="out-N"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">Coil Thickness (T)</span><span class="r-value" id="out-T"></span><span class="r-unit">in</span></div>
+                <div class="result-row"><span class="r-label">ID + T = D (mean dia)</span><span class="r-value" id="out-D"></span><span class="r-unit">in</span></div>
+                <div class="result-row constraint"><span class="r-label">O.D. = ID + 2T</span><span class="r-value" id="out-OD"></span><span class="r-unit">in</span></div>
+                <div class="result-row constraint"><span class="r-label">Coil Length B (axial)</span><span class="r-value" id="out-B"></span><span class="r-unit">in</span></div>
+                <div class="result-row"><span class="r-label">B/D ratio</span><span class="r-value" id="out-BD"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">T/D ratio</span><span class="r-value" id="out-TD"></span><span class="r-unit"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONDUCTOR -->
+    <div class="section" id="sec-conductor">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Conductor</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row"><span class="r-label">Conductor Area</span><span class="r-value" id="out-condArea"></span><span class="r-unit">sq in</span></div>
+                <div class="result-row"><span class="r-label">Fill Factor</span><span class="r-value" id="out-fillFactor"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">A (mean radius)</span><span class="r-value" id="out-A"></span><span class="r-unit">in</span></div>
+                <div class="result-row"><span class="r-label">MLT (mean length/turn)</span><span class="r-value" id="out-MLT"></span><span class="r-unit">in</span></div>
+                <div class="result-row"><span class="r-label">Conductor Length</span><span class="r-value" id="out-condLength"></span><span class="r-unit">ft</span></div>
+                <div class="result-row"><span class="r-label">Weight</span><span class="r-value" id="out-weight"></span><span class="r-unit">lbs</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESISTANCE -->
+    <div class="section" id="sec-resistance">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>DC Resistance</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row"><span class="r-label">DC Ohms at 20&deg;C</span><span class="r-value" id="out-R20"></span><span class="r-unit">&Omega;</span></div>
+                <div class="result-row"><span class="r-label">DC Ohms at 75&deg;C</span><span class="r-value" id="out-R75"></span><span class="r-unit">&Omega;</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INDUCTANCE -->
+    <div class="section" id="sec-inductance">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Inductance</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row"><span class="r-label">Wheeler &micro;H</span><span class="r-value" id="out-wheelerUH"></span><span class="r-unit">&micro;H</span></div>
+                <div class="result-row"><span class="r-label">K-formula &micro;H (L=)</span><span class="r-value" id="out-kformulaUH"></span><span class="r-unit">&micro;H</span></div>
+                <div class="result-row"><span class="r-label">mH Nominal</span><span class="r-value" id="out-mHnom"></span><span class="r-unit">mH</span></div>
+                <div class="result-row"><span class="r-label">mH min (90%)</span><span class="r-value" id="out-mHmin"></span><span class="r-unit">mH</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPEDANCE -->
+    <div class="section" id="sec-impedance">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Impedance</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row constraint"><span class="r-label">IZ at 60 Hz</span><span class="r-value" id="out-IZ60"></span><span class="r-unit">&Omega;</span></div>
+                <div class="result-row"><span class="r-label">Target IZ</span><span class="r-value" id="out-targetIZ"></span><span class="r-unit">&Omega;</span></div>
+                <div class="result-row"><span class="r-label">Test Volts</span><span class="r-value" id="out-testVolts"></span><span class="r-unit">V</span></div>
+                <div class="result-row constraint"><span class="r-label">Amp/Sq.In (AC)</span><span class="r-value" id="out-ampSqIn"></span><span class="r-unit">A/in&sup2;</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AC RESISTANCE & LOSSES -->
+    <div class="section" id="sec-aclosses">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>AC Resistance & Losses (60 Hz)</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row"><span class="r-label">Skin Depth @60Hz</span><span class="r-value" id="out-dpen60"></span><span class="r-unit">in</span></div>
+                <div class="result-row"><span class="r-label">Q (thickness/Dpen)</span><span class="r-value" id="out-Q60"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">M (single-layer)</span><span class="r-value" id="out-M60"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">D (proximity)</span><span class="r-value" id="out-D60"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">Rac/Rdc</span><span class="r-value" id="out-racRdc"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">I&sup2;R (DC component)</span><span class="r-value" id="out-i2r"></span><span class="r-unit">W</span></div>
+                <div class="result-row"><span class="r-label">Eddy Losses</span><span class="r-value" id="out-eddy"></span><span class="r-unit">W</span></div>
+                <div class="result-row"><span class="r-label">Total Losses</span><span class="r-value" id="out-totalLoss"></span><span class="r-unit">W</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- THERMAL -->
+    <div class="section" id="sec-thermal">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Thermal</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row"><span class="r-label">Surface Area (external)</span><span class="r-value" id="out-saExt"></span><span class="r-unit">sq in</span></div>
+                <div class="result-row"><span class="r-label">Surface Area (w/ ducts)</span><span class="r-value" id="out-saDuct"></span><span class="r-unit">sq in</span></div>
+                <div class="result-row"><span class="r-label">W/sq.in (w/ ducts)</span><span class="r-value" id="out-wSqInDuct"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">W/sq.in (external only)</span><span class="r-value" id="out-wSqInExt"></span><span class="r-unit"></span></div>
+                <div class="result-row constraint"><span class="r-label">Temp Rise (w/ ducts)</span><span class="r-value" id="out-tempRiseDuct"></span><span class="r-unit">&deg;C</span></div>
+                <div class="result-row constraint"><span class="r-label">Temp Rise (ext only)</span><span class="r-value" id="out-tempRiseExt"></span><span class="r-unit">&deg;C</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLOAD / FAULT -->
+    <div class="section" id="sec-fault">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Overload / Fault</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row"><span class="r-label">Fault Watts</span><span class="r-value" id="out-faultW"></span><span class="r-unit">W</span></div>
+                <div class="result-row"><span class="r-label">Fault W/sq.in</span><span class="r-value" id="out-faultWSqIn"></span><span class="r-unit"></span></div>
+                <div class="result-row constraint"><span class="r-label">Fault A/sq.in</span><span class="r-value" id="out-faultASqIn"></span><span class="r-unit">A/in&sup2;</span></div>
+                <div class="result-row constraint"><span class="r-label">Overload Temp Rise*</span><span class="r-value" id="out-overloadTR"></span><span class="r-unit">&deg;C</span></div>
+                <div class="result-row constraint"><span class="r-label">Adiabatic Temp Rise**</span><span class="r-value" id="out-adiabaticTR"></span><span class="r-unit">&deg;C</span></div>
+            </div>
+            <div style="font-size:0.72rem;color:#666;margin-top:6px;padding-left:8px;">* Empirical model with 1-hour thermal time constant — assumes cooling during fault, reasonable for longer overloads</div>
+            <div style="font-size:0.72rem;color:#666;margin-top:2px;padding-left:8px;">** Adiabatic model (zero heat loss) — conservative upper bound, more accurate for short-duration faults</div>
+        </div>
+    </div>
+
+    <!-- FREQUENCY SWEEP -->
+    <div class="section" id="sec-freqsweep">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Frequency Sweep</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body" style="padding:0;">
+            <table class="freq-table">
+                <thead>
+                    <tr>
+                        <th>Freq (Hz)</th>
+                        <th>Dpen (in)</th>
+                        <th>Q</th>
+                        <th>M</th>
+                        <th>D</th>
+                        <th>Rac/Rdc</th>
+                        <th>AC Ohms</th>
+                    </tr>
+                </thead>
+                <tbody id="freq-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BILL OF MATERIALS -->
+    <div class="section" id="sec-bom">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Bill of Materials (Simplified)</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="results-grid">
+                <div class="result-row"><span class="r-label">Sticks per layer</span><span class="r-value" id="out-sticksPerLayer"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">Total sticks</span><span class="r-value" id="out-totalSticks"></span><span class="r-unit"></span></div>
+                <div class="result-row"><span class="r-label">Sq.in per layer (wrap)</span><span class="r-value" id="out-sqInPerLayer"></span><span class="r-unit">sq in</span></div>
+                <div class="result-row"><span class="r-label">Total sq.in of wrap</span><span class="r-value" id="out-totalWrap"></span><span class="r-unit">sq in</span></div>
+                <div class="result-row"><span class="r-label">Sq.in of PO</span><span class="r-value" id="out-sqInPO"></span><span class="r-unit">sq in</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HI-POT -->
+    <div class="section" id="sec-hipot">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h3>Hi-Pot</h3><span class="toggle">&#9660;</span>
+        </div>
+        <div class="section-body">
+            <div class="result-row"><span class="r-label">Hi-Pot Test Voltage</span><span class="r-value">50 kV</span><span class="r-unit"></span></div>
+        </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="note-section">
+        <strong>Note:</strong> Most coils are not round. Increase the ID by 1 for small coils and 0.5 for large when bars are used for leads. This simulates actual micro H at the smaller ID.
+    </div>
+
+    <div class="note-section">
+        <strong>Project Description:</strong> Air-core reactor coil design calculator for high-voltage power systems. This tool computes derived electrical, thermal, and mechanical properties from basic coil geometry and conductor specifications. All dimensions are in inches unless otherwise noted. The Wheeler formula value is used for IZ and impedance calculations. Frequency for all 60 Hz calculations is hardcoded at power frequency (60 Hz).
+    </div>
+
+    <footer>Reactor Coil Design Calculator &copy; 2026</footer>
+</div>
+
+</div>
+
+<!-- WINDING SHEET TAB -->
+<div id="tab-ws-existing" style="display:none;">
+
+    <style>
+        .ws-page {
+            background: #fff;
+            color: #000;
+            max-width: 960px;
+            margin: 20px auto;
+            padding: 20px 28px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        .ws-page * { color: #000; }
+
+        /* Main table-based layout like actual winding sheets */
+        .ws-main-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+        }
+        .ws-main-table td {
+            border: 1px solid #000;
+            padding: 4px 8px;
+            vertical-align: top;
+        }
+        .ws-main-table .ws-label {
+            font-weight: 700;
+            white-space: nowrap;
+            width: 120px;
+            background: #f5f5f5;
+        }
+        .ws-main-table .ws-val {
+            font-weight: 400;
+        }
+        .ws-main-table .ws-val b { font-weight: 700; }
+        .ws-main-table .ws-top-row {
+            background: #e8e8e8;
+            font-weight: 700;
+            font-size: 11px;
+        }
+
+        /* Header row spanning full width */
+        .ws-title-row td {
+            background: #222 !important;
+            color: #fff !important;
+            font-weight: 700;
+            font-size: 13px;
+            text-align: center;
+            padding: 6px;
+            letter-spacing: 1px;
+        }
+        .ws-title-row td * { color: #fff !important; }
+
+        /* Bottom sections */
+        .ws-bottom {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border: 2px solid #000;
+            border-top: none;
+        }
+        .ws-bottom-left, .ws-bottom-right {
+            padding: 8px 10px;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .ws-bottom-left { border-right: 1px solid #000; }
+        .ws-bottom-right b { display: block; margin-bottom: 2px; }
+
+        /* Coil size table */
+        .ws-size-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 11px;
+        }
+        .ws-size-table td {
+            border: 1px solid #000;
+            padding: 3px 6px;
+        }
+        .ws-size-table .ws-size-label { font-weight: 700; background: #f5f5f5; }
+        .ws-size-table .ws-size-val { min-width: 80px; text-align: center; }
+
+        /* Footer */
+        .ws-footer {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            border: 2px solid #000;
+            border-top: none;
+            font-size: 11px;
+        }
+        .ws-footer-notes { padding: 6px 10px; border-right: 1px solid #000; }
+        .ws-footer-meta { min-width: 240px; }
+        .ws-footer-meta table {
+            width: 100%;
+            border-collapse: collapse;
+            height: 100%;
+        }
+        .ws-footer-meta td {
+            border: 1px solid #000;
+            padding: 3px 8px;
+        }
+        .ws-footer-meta .ws-meta-label { font-weight: 700; background: #f5f5f5; width: 130px; }
+        .ws-footer-meta .ws-meta-val { min-width: 80px; }
+        .ws-footer-meta .ws-sheet-label {
+            font-weight: 700;
+            font-size: 14px;
+            text-align: center;
+            background: #e8e8e8;
+        }
+
+        .ws-print-btn {
+            display: block;
+            margin: 12px auto;
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 24px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .ws-print-btn:hover { background: #1a4a80; }
+
+        @media print {
+            body { background: #fff !important; }
+            header, .ws-print-btn { display: none !important; }
+            .ws-page {
+                margin: 0;
+                padding: 10px 15px;
+                max-width: 100%;
+            }
+        }
+    </style>
+
+    <button class="ws-print-btn" onclick="window.print()">Print Winding Sheet</button>
+
+    <div class="ws-page" id="ws-content">
+
+        <table class="ws-main-table">
+            <!-- Rating row -->
+            <tr class="ws-top-row">
+                <td colspan="4" id="ws-rating-summary"></td>
+                <td>FREQUENCY <b>60</b></td>
+                <td>PHASE <b id="ws-phase">1</b></td>
+                <td colspan="2">TYPE <b>COIL &amp; AIR CORE</b></td>
+            </tr>
+            <!-- Voltage -->
+            <tr>
+                <td class="ws-label">VOLTAGE</td>
+                <td colspan="7" class="ws-val" id="ws-voltage"></td>
+            </tr>
+            <!-- Center Leg / Tube / Coil Length -->
+            <tr>
+                <td class="ws-label">CENTER LEG</td>
+                <td class="ws-val">N/A</td>
+                <td class="ws-label">TUBE</td>
+                <td class="ws-val" id="ws-tube" colspan="2"></td>
+                <td class="ws-label">COIL LENGTH</td>
+                <td class="ws-val" id="ws-coilLength" colspan="2"></td>
+            </tr>
+            <!-- Wind count -->
+            <tr>
+                <td colspan="8" class="ws-val" style="text-align:center;"><b>Wind 1 Coil</b></td>
+            </tr>
+            <!-- Winding type -->
+            <tr>
+                <td class="ws-label">WINDING</td>
+                <td colspan="7" class="ws-val">Single Winding</td>
+            </tr>
+            <!-- Wire size -->
+            <tr>
+                <td class="ws-label">WIRE SIZE</td>
+                <td colspan="7" class="ws-val" id="ws-wireSize"></td>
+            </tr>
+            <!-- Turns -->
+            <tr>
+                <td class="ws-label">TURNS</td>
+                <td colspan="7" class="ws-val"><b id="ws-totalTurns"></b></td>
+            </tr>
+            <!-- Leads -->
+            <tr>
+                <td class="ws-label">LEADS</td>
+                <td colspan="7" class="ws-val" id="ws-leads">
+                    <div style="display:flex;gap:40px;"><span>H1</span><span>H2</span></div>
+                    <div style="display:flex;gap:40px;" id="ws-lead-turns"><span>0</span><span></span></div>
+                </td>
+            </tr>
+            <!-- Keepback -->
+            <tr>
+                <td class="ws-label">KEEPBACK</td>
+                <td colspan="7" class="ws-val" id="ws-keepback"></td>
+            </tr>
+            <!-- Winding Length -->
+            <tr>
+                <td class="ws-label">WDG LENGTH</td>
+                <td colspan="7" class="ws-val" id="ws-wdgLength"></td>
+            </tr>
+            <!-- Turns/Layer -->
+            <tr>
+                <td class="ws-label">TURNS/LAYER</td>
+                <td colspan="7" class="ws-val"><b id="ws-turnsPerLayer"></b></td>
+            </tr>
+            <!-- Layers -->
+            <tr>
+                <td class="ws-label">LAYERS</td>
+                <td colspan="7" class="ws-val"><b id="ws-numLayers"></b></td>
+            </tr>
+            <!-- Layer Insulation -->
+            <tr>
+                <td class="ws-label">LAYER<br>INSULATION</td>
+                <td colspan="7" class="ws-val" id="ws-layerInsDesc"></td>
+            </tr>
+            <!-- Wrapper -->
+            <tr>
+                <td class="ws-label">WRAPPER</td>
+                <td colspan="7" class="ws-val">(2) 0.010 TV + Glass Tape</td>
+            </tr>
+            <!-- MLT -->
+            <tr>
+                <td class="ws-label">MLT</td>
+                <td colspan="3" class="ws-val"><b id="ws-mlt"></b></td>
+                <td class="ws-label">WIRE WEIGHT</td>
+                <td colspan="3" class="ws-val"><b id="ws-weight"></b></td>
+            </tr>
+        </table>
+
+        <!-- Bottom: Leads/Notes + Coil Diagram/Sizes -->
+        <div class="ws-bottom">
+            <div class="ws-bottom-left">
+                <b>LEADS:</b><br>
+                <span id="ws-lead-details">
+                    H1: Self out ___" with HV sleeve in margin, out ___"<br>
+                    H2: Braze to terminal, out face of coil
+                </span>
+                <br><br>
+                <b>PADS:</b> (4) 0.015 TV, flush, ___" Wide
+                <br><br>
+                <b>NOTES:</b><br>
+                <span id="ws-notes-text">
+                    *See Winding Tube Sheet for mold and tube details<br>
+                    **Place sticks 2.5" or less apart to ensure gap between layers.
+                </span>
+            </div>
+            <div class="ws-bottom-right">
+                <b>Coil Diagram</b>
+                <div style="border:1px solid #999;height:100px;margin:4px 0;display:flex;align-items:center;justify-content:center;color:#999;font-size:11px;">
+                    <div style="text-align:center;">
+                        <div>H1 &larr; <span id="ws-diagram-id"></span> &rarr; H2</div>
+                        <div style="margin-top:4px;font-size:10px;">Coil Diagram</div>
+                    </div>
+                </div>
+                <b>Finished Coil</b>
+                <table class="ws-size-table">
+                    <tr>
+                        <td class="ws-size-label">Calculated Coil Size:</td>
+                        <td class="ws-size-val" id="ws-calcSize"></td>
+                        <td class="ws-size-val" id="ws-calcSize2"></td>
+                    </tr>
+                    <tr>
+                        <td class="ws-size-label">Maximum Coil Size:</td>
+                        <td class="ws-size-val" id="ws-maxSize"></td>
+                        <td class="ws-size-val" id="ws-maxSize2"></td>
+                    </tr>
+                    <tr>
+                        <td class="ws-size-label">Measured Coil Size:</td>
+                        <td class="ws-size-val"></td>
+                        <td class="ws-size-val"></td>
+                    </tr>
+                </table>
+                <div style="font-size:10px;margin-top:4px;color:#666;">Either dimension 1/2" less: check winding and alert engineering</div>
+            </div>
+        </div>
+
+        <!-- Footer: Revisions + Meta -->
+        <div class="ws-footer">
+            <div class="ws-footer-notes">
+                <table class="ws-size-table" style="margin:0;">
+                    <tr><td class="ws-size-label">Revision</td><td class="ws-size-label">Date</td><td class="ws-size-label" style="min-width:200px;">Description</td></tr>
+                    <tr><td style="height:18px;"></td><td></td><td></td></tr>
+                    <tr><td style="height:18px;"></td><td></td><td></td></tr>
+                </table>
+            </div>
+            <div class="ws-footer-meta">
+                <table>
+                    <tr><td class="ws-meta-label">ENGINEERED BY</td><td class="ws-meta-val"></td><td class="ws-sheet-label" rowspan="4">WINDING<br>SHEET</td></tr>
+                    <tr><td class="ws-meta-label">REVIEWED BY</td><td class="ws-meta-val"></td></tr>
+                    <tr><td class="ws-meta-label">REVISION DATE</td><td class="ws-meta-val" id="ws-date"></td></tr>
+                    <tr><td class="ws-meta-label">REVISION NUMBER</td><td class="ws-meta-val">0</td></tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- AI WINDING SHEET TAB -->
+<div id="tab-ws-ai" style="display:none;">
+
+    <style>
+        .wsai-page {
+            background: #fff;
+            color: #000;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 30px 40px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .wsai-page * { color: #000; }
+        .wsai-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+        }
+        .wsai-header h1 { font-size: 1.4rem; margin: 0; }
+        .wsai-header-right { text-align: right; font-size: 12px; }
+        .wsai-header-right div { margin-bottom: 3px; }
+
+        .wsai-section-title {
+            background: #222;
+            color: #fff !important;
+            padding: 4px 10px;
+            font-weight: 700;
+            font-size: 13px;
+            margin: 14px 0 6px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .wsai-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 2px 20px;
+        }
+        .wsai-grid-2 { grid-template-columns: 1fr 1fr; }
+        .wsai-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px dotted #aaa;
+        }
+        .wsai-item-label { font-weight: 400; }
+        .wsai-item-value { font-weight: 700; text-align: right; }
+
+        .wsai-layer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            font-size: 12px;
+        }
+        .wsai-layer-table th {
+            background: #444;
+            color: #fff !important;
+            padding: 4px 6px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid #000;
+        }
+        .wsai-layer-table td {
+            border: 1px solid #999;
+            padding: 3px 6px;
+            text-align: center;
+        }
+        .wsai-layer-table tr:nth-child(even) { background: #f0f0f0; }
+        .wsai-layer-table .stick-row { background: #ffe0b2 !important; font-weight: 600; }
+
+        .wsai-notes {
+            margin-top: 14px;
+            padding: 8px 12px;
+            border: 1px solid #999;
+            background: #f9f9f9;
+            font-size: 12px;
+        }
+        .wsai-notes p { margin: 3px 0; }
+
+        .wsai-signoff {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 2px solid #000;
+        }
+        .wsai-signoff-box {
+            border: 1px solid #999;
+            padding: 8px 12px;
+            min-height: 60px;
+        }
+        .wsai-signoff-line {
+            border-bottom: 1px solid #000;
+            margin-top: 20px;
+            height: 1px;
+        }
+
+        .wsai-print-btn {
+            display: block;
+            margin: 12px auto;
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 24px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .wsai-print-btn:hover { background: #1a4a80; }
+
+        @media print {
+            .wsai-print-btn { display: none !important; }
+            .wsai-page { margin: 0; padding: 15px 20px; max-width: 100%; }
+        }
+    </style>
+
+    <button class="wsai-print-btn" onclick="window.print()">Print Winding Sheet</button>
+
+    <div class="wsai-page">
+
+        <div class="wsai-header">
+            <div>
+                <h1>WINDING SHEET</h1>
+                <div style="font-size:12px;margin-top:4px;">Air-Core Reactor — Work Instructions</div>
+            </div>
+            <div class="wsai-header-right">
+                <div><b>Date:</b> <span id="wsai-date"></span></div>
+                <div><b>Job #:</b> _______________</div>
+                <div><b>Rev:</b> ___</div>
+            </div>
+        </div>
+
+        <div class="wsai-section-title">Coil Specifications</div>
+        <div class="wsai-grid">
+            <div class="wsai-item"><span class="wsai-item-label">Coil ID</span><span class="wsai-item-value" id="wsai-coilID"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Coil OD</span><span class="wsai-item-value" id="wsai-coilOD"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Coil Height (B)</span><span class="wsai-item-value" id="wsai-coilHeight"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Coil Thickness (T)</span><span class="wsai-item-value" id="wsai-coilThk"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Total Turns</span><span class="wsai-item-value" id="wsai-totalTurns"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">No. Layers</span><span class="wsai-item-value" id="wsai-numLayers"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Turns/Layer</span><span class="wsai-item-value" id="wsai-turnsPerLayer"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Margin (each end)</span><span class="wsai-item-value" id="wsai-margin"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Winding Direction</span><span class="wsai-item-value">CW / CCW</span></div>
+        </div>
+
+        <div class="wsai-section-title">Conductor</div>
+        <div class="wsai-grid">
+            <div class="wsai-item"><span class="wsai-item-label">Material</span><span class="wsai-item-value" id="wsai-material"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Thickness</span><span class="wsai-item-value" id="wsai-condThk"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Width</span><span class="wsai-item-value" id="wsai-condWidth"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">No. Conductors</span><span class="wsai-item-value" id="wsai-numCond"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Cond. Area</span><span class="wsai-item-value" id="wsai-condArea"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Total Cond. Length</span><span class="wsai-item-value" id="wsai-condLength"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Conductor Gap</span><span class="wsai-item-value" id="wsai-condGap"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Coil Weight</span><span class="wsai-item-value" id="wsai-weight"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">MLT</span><span class="wsai-item-value" id="wsai-mlt"></span></div>
+        </div>
+
+        <div class="wsai-section-title">Insulation & Spacing</div>
+        <div class="wsai-grid">
+            <div class="wsai-item"><span class="wsai-item-label">Layer Insulation</span><span class="wsai-item-value" id="wsai-layerIns"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">No. Stick Layers</span><span class="wsai-item-value" id="wsai-numSticks"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Stick Thickness</span><span class="wsai-item-value" id="wsai-stickThk"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Sticks/Layer</span><span class="wsai-item-value" id="wsai-sticksPerLayer"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Total Sticks</span><span class="wsai-item-value" id="wsai-totalSticks"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Build Factor</span><span class="wsai-item-value" id="wsai-buildFactor"></span></div>
+        </div>
+
+        <div class="wsai-section-title">Materials Required</div>
+        <div class="wsai-grid wsai-grid-2">
+            <div class="wsai-item"><span class="wsai-item-label">Wrap per Layer</span><span class="wsai-item-value" id="wsai-wrapPerLayer"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Total Wrap</span><span class="wsai-item-value" id="wsai-totalWrap"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Total Polyester Overlay</span><span class="wsai-item-value" id="wsai-totalPO"></span></div>
+        </div>
+
+        <div class="wsai-section-title">Electrical Targets (for reference)</div>
+        <div class="wsai-grid">
+            <div class="wsai-item"><span class="wsai-item-label">Target IZ @60Hz</span><span class="wsai-item-value" id="wsai-targetIZ"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Inductance (Wheeler)</span><span class="wsai-item-value" id="wsai-inductance"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">mH Nominal</span><span class="wsai-item-value" id="wsai-mH"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">DC Resistance @75C</span><span class="wsai-item-value" id="wsai-dcR"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Hi-Pot Test</span><span class="wsai-item-value" id="wsai-hipot"></span></div>
+            <div class="wsai-item"><span class="wsai-item-label">Rated Current</span><span class="wsai-item-value" id="wsai-ratedAmps"></span></div>
+        </div>
+
+        <div class="wsai-section-title">Layer-by-Layer Winding Schedule</div>
+        <div style="overflow-x:auto;">
+            <table class="wsai-layer-table">
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Type</th>
+                        <th>Turns</th>
+                        <th>Cumulative Turns</th>
+                        <th>OD After Layer (in)</th>
+                        <th>Insulation</th>
+                        <th>Winder Check</th>
+                    </tr>
+                </thead>
+                <tbody id="wsai-layer-tbody"></tbody>
+            </table>
+        </div>
+
+        <div class="wsai-notes">
+            <b>Notes:</b>
+            <p>1. Maintain uniform tension throughout winding. Do not allow conductor to buckle or overlap.</p>
+            <p>2. Apply layer insulation tightly after each conductor layer — no wrinkles or air pockets.</p>
+            <p>3. Place sticks evenly spaced around circumference at each stick layer.</p>
+            <p>4. Verify turn count at each layer before proceeding. Mark checkbox when confirmed.</p>
+            <p>5. Keep margin spacing consistent at both ends of each layer.</p>
+            <p>6. Most coils are not perfectly round — increase ID by 1" for small coils, 0.5" for large when bars are used for leads.</p>
+        </div>
+
+        <div class="wsai-signoff">
+            <div class="wsai-signoff-box">
+                <b style="font-size:12px;">Wound By:</b>
+                <div class="wsai-signoff-line"></div>
+                <div style="margin-top:8px;font-size:11px;">Name / Date</div>
+            </div>
+            <div class="wsai-signoff-box">
+                <b style="font-size:12px;">Inspected By:</b>
+                <div class="wsai-signoff-line"></div>
+                <div style="margin-top:8px;font-size:11px;">Name / Date</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// ===== SAVED DESIGNS =====
+function getDesigns() {
+    try { return JSON.parse(localStorage.getItem('reactor-designs') || '{}'); }
+    catch(e) { return {}; }
+}
+
+var currentDesignName = null;
+
+function setCurrentDesign(name) {
+    currentDesignName = name;
+    document.getElementById('current-design-name').textContent = name || 'Unsaved';
+    document.getElementById('save-btn').textContent = name ? 'Update' : 'Save';
+}
+
+function gatherInputData() {
+    var data = {};
+    var inputs = document.querySelectorAll('.input-panel input');
+    for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].id) data[inputs[i].id] = inputs[i].value;
+    }
+    var selects = document.querySelectorAll('.input-panel select');
+    for (var i = 0; i < selects.length; i++) {
+        if (selects[i].id) data[selects[i].id] = selects[i].value;
+    }
+    return data;
+}
+
+function saveDesign() {
+    var designs = getDesigns();
+    if (currentDesignName) {
+        // Currently working on a saved design — overwrite it
+        designs[currentDesignName] = gatherInputData();
+        localStorage.setItem('reactor-designs', JSON.stringify(designs));
+        alert('Design "' + currentDesignName + '" updated.');
+        updateDesignCount();
+        clearAllInputs();
+    } else {
+        // New design — prompt for name
+        var name = prompt('Enter a name for this design:');
+        if (!name || !name.trim()) return;
+        name = name.trim();
+        designs[name] = gatherInputData();
+        localStorage.setItem('reactor-designs', JSON.stringify(designs));
+        alert('Design "' + name + '" saved.');
+        updateDesignCount();
+        clearAllInputs();
+    }
+}
+
+function loadDesign(name) {
+    var designs = getDesigns();
+    var data = designs[name];
+    if (!data) return;
+    for (var id in data) {
+        var el = document.getElementById(id);
+        if (el) el.value = data[id];
+    }
+    setCurrentDesign(name);
+    calculate();
+    if (document.getElementById('tab-ws-existing').style.display !== 'none') populateWindingSheet();
+    document.getElementById('saved-designs-list').style.display = 'none';
+    document.getElementById('saved-designs-arrow').style.transform = 'rotate(0deg)';
+}
+
+function deleteDesign(name, e) {
+    e.stopPropagation();
+    if (!confirm('Delete design "' + name + '"?')) return;
+    var designs = getDesigns();
+    delete designs[name];
+    localStorage.setItem('reactor-designs', JSON.stringify(designs));
+    updateDesignCount();
+    openSavedDesigns();
+}
+
+function updateDesignCount() {
+    var count = Object.keys(getDesigns()).length;
+    var badge = document.getElementById('saved-designs-count');
+    badge.textContent = count > 0 ? count : '';
+}
+
+function openSavedDesigns() {
+    var list = document.getElementById('saved-designs-list');
+    var arrow = document.getElementById('saved-designs-arrow');
+    if (list.style.display !== 'none') {
+        list.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+        return;
+    }
+    arrow.style.transform = 'rotate(180deg)';
+    var designs = getDesigns();
+    var names = Object.keys(designs);
+    if (names.length === 0) {
+        list.innerHTML = '<div class="sd-empty">'
+            + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>'
+            + 'No saved designs yet.<br>Use <b>Save</b> below to store a design.</div>';
+    } else {
+        var html = '';
+        for (var i = 0; i < names.length; i++) {
+            var safeName = names[i].replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            html += '<div class="sd-item" onclick="loadDesign(\'' + safeName + '\')">'
+                + '<span class="sd-icon">&#9670;</span>'
+                + '<span class="sd-name">' + names[i] + '</span>'
+                + '<span class="sd-delete" onclick="deleteDesign(\'' + safeName + '\', event)" title="Delete">&times;</span>'
+                + '</div>';
+        }
+        list.innerHTML = html;
+    }
+    list.style.display = 'block';
+}
+
+// ===== CLEAR ALL INPUTS =====
+function clearAllInputs() {
+    var inputs = document.querySelectorAll('.input-panel input');
+    for (var i = 0; i < inputs.length; i++) {
+        inputs[i].value = 0;
+    }
+    var selects = document.querySelectorAll('.input-panel select');
+    for (var i = 0; i < selects.length; i++) {
+        selects[i].selectedIndex = 0;
+    }
+    setCurrentDesign(null);
+    calculate();
+    if (document.getElementById('tab-ws-existing').style.display !== 'none') populateWindingSheet();
+}
+
+// ===== THEME TOGGLE =====
+function toggleTheme() {
+    var body = document.body;
+    var btn = document.getElementById('theme-toggle');
+    body.classList.toggle('light');
+    var isLight = body.classList.contains('light');
+    btn.textContent = isLight ? 'Dark' : 'Light';
+    btn.style.color = isLight ? '#333' : '#ccc';
+    btn.style.borderColor = isLight ? '#aaa' : '#666';
+    localStorage.setItem('reactor-theme', isLight ? 'light' : 'dark');
+}
+// Restore saved theme
+(function() {
+    if (localStorage.getItem('reactor-theme') === 'light') {
+        document.body.classList.add('light');
+        var btn = document.getElementById('theme-toggle');
+        if (btn) { btn.textContent = 'Dark'; btn.style.color = '#333'; btn.style.borderColor = '#aaa'; }
+    }
+})();
+
+// ===== TAB SWITCHING =====
+function switchTab(tab) {
+    document.getElementById('tab-calculator').style.display = (tab === 'calculator') ? 'flex' : 'none';
+    document.getElementById('tab-ws-existing').style.display = (tab === 'ws-existing') ? 'block' : 'none';
+    document.getElementById('tab-ws-ai').style.display = (tab === 'ws-ai') ? 'block' : 'none';
+    var btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(function(btn) {
+        var btnText = btn.textContent.toLowerCase();
+        if (tab === 'calculator') btn.classList.toggle('active', btnText.indexOf('calculator') !== -1);
+        else if (tab === 'ws-existing') btn.classList.toggle('active', btnText.indexOf('existing') !== -1);
+        else if (tab === 'ws-ai') btn.classList.toggle('active', btnText.indexOf('ws - new') !== -1);
+        else btn.classList.remove('active');
+    });
+    if (tab === 'ws-existing') populateWindingSheet();
+    if (tab === 'ws-ai') populateWindingSheetAI();
+}
+
+function populateWindingSheet() {
+    // Read all inputs
+    var coilID = getVal('coilID');
+    var numLayers = getVal('numLayers');
+    var margin = getVal('margin');
+    var turnsPerLayer = getVal('turnsPerLayer');
+    var numConductors = getVal('numConductors');
+    var condThickness = getVal('condThickness');
+    var condWidth = getVal('condWidth');
+    var condGap = getVal('condGap');
+    var materialVal = parseInt(document.getElementById('material').value);
+    var isCu = (materialVal === 1);
+    var layerIns = getVal('layerIns');
+    var numSticks = getVal('numSticks');
+    var stickThickness = getVal('stickThickness');
+    var buildFactor = getVal('buildFactor');
+    var dcAmps = getVal('dcAmps');
+    var acAmps = getVal('acAmps');
+    var targetIZ = getVal('targetIZ');
+    var overloadCurrent = getVal('overloadCurrent');
+    var overloadSeconds = getVal('overloadSeconds');
+
+    // Derived values
+    var totalTurns = numLayers * turnsPerLayer;
+    var T = (numLayers * condThickness + (numLayers - 1) * layerIns) * buildFactor + numSticks * stickThickness;
+    var OD = coilID + 2 * T;
+    var avgRadius = coilID / 2 + T / 2;
+    var MLT = avgRadius * 2 * 3.14159;
+    var B;
+    if (turnsPerLayer === 1) {
+        B = condWidth * numConductors + condGap * (numConductors - 1) + 2 * margin;
+    } else {
+        B = condWidth * turnsPerLayer * numConductors + condGap * (turnsPerLayer * numConductors - 1) + 2 * margin;
+    }
+    var wdgLength = B - 2 * margin;
+    var condArea = condThickness * condWidth - 0.000838;
+    var condLengthFt = MLT * totalTurns / 12;
+    var weightFactor = isCu ? 3.8762 : 1.172;
+    var weight = numConductors * condArea * condLengthFt * weightFactor;
+    var uH_wheeler = (0.8 * avgRadius * avgRadius * totalTurns * totalTurns) / (6 * avgRadius + 9 * wdgLength + 10 * T);
+    var mH = targetIZ / (2 * Math.PI * 60) * 1000;
+
+    var sticksPerLayer = Math.floor(MLT / 2.5);
+    if (sticksPerLayer < 0) sticksPerLayer = 0;
+
+    // Stick layer positions
+    var stickInterval = numSticks > 0 ? Math.floor(numLayers / numSticks) : 0;
+    var stickLayers = [];
+    if (numSticks > 0 && stickInterval > 0) {
+        for (var s = stickInterval; s < numLayers; s += stickInterval) {
+            if (stickLayers.length < numSticks) stickLayers.push(s);
+        }
+    }
+
+    // Helper: convert decimal inches to fraction string
+    function toFraction(val) {
+        var whole = Math.floor(val);
+        var frac = val - whole;
+        var sixteenths = Math.round(frac * 16);
+        if (sixteenths === 0) return whole + '';
+        if (sixteenths === 16) return (whole + 1) + '';
+        if (sixteenths === 8) return whole + '-1/2';
+        if (sixteenths === 4) return whole + '-1/4';
+        if (sixteenths === 12) return whole + '-3/4';
+        // Reduce
+        var n = sixteenths, d = 16;
+        while (n % 2 === 0) { n /= 2; d /= 2; }
+        return whole + '-' + n + '/' + d;
+    }
+
+    // Date
+    var today = new Date();
+    document.getElementById('ws-date').textContent = (today.getMonth()+1) + '/' + today.getDate() + '/' + today.getFullYear();
+
+    // Rating summary
+    var ratingParts = [];
+    if (acAmps > 0) ratingParts.push(acAmps + 'A Cont');
+    if (overloadCurrent > 0) ratingParts.push(overloadCurrent + 'A @ ' + overloadSeconds + ' sec');
+    if (mH > 0) ratingParts.push(mH.toFixed(1) + ' mH');
+    document.getElementById('ws-rating-summary').textContent = ratingParts.join(', ');
+
+    // Wire size description
+    var condDesc = '';
+    if (numConductors > 1) condDesc += '( ' + numConductors + ' ) ';
+    condDesc += condThickness + ' x ' + condWidth;
+    condDesc += isCu ? ' Heavy CU Wire' : ' Aluminum Foil';
+    document.getElementById('ws-wireSize').textContent = condDesc;
+
+    // Tube
+    document.getElementById('ws-tube').textContent = toFraction(coilID) + ' OD Circular Tube*';
+
+    // Coil length
+    document.getElementById('ws-coilLength').textContent = toFraction(B);
+
+    // Turns
+    document.getElementById('ws-totalTurns').textContent = totalTurns;
+    document.getElementById('ws-lead-turns').innerHTML = '<span>0</span><span>' + totalTurns + '</span>';
+
+    // Keepback
+    document.getElementById('ws-keepback').textContent = toFraction(margin) + ' PO';
+
+    // Wdg length
+    document.getElementById('ws-wdgLength').textContent = toFraction(wdgLength);
+
+    // Turns/layer, layers
+    document.getElementById('ws-turnsPerLayer').textContent = turnsPerLayer;
+    document.getElementById('ws-numLayers').textContent = numLayers;
+
+    // Layer insulation description
+    var insDesc = '';
+    if (stickLayers.length > 0) {
+        insDesc += layerIns.toFixed(3) + ' TV + ' + toFraction(stickThickness) + ' Stick AR after layers ' + stickLayers.join(', ') + '**\n';
+    }
+    insDesc += layerIns.toFixed(3) + ' TV all other layers';
+    document.getElementById('ws-layerInsDesc').innerHTML = insDesc.replace('\n', '<br>');
+
+    // MLT, weight
+    document.getElementById('ws-mlt').textContent = MLT.toFixed(1);
+    document.getElementById('ws-weight').textContent = weight.toFixed(1);
+
+    // Diagram ID
+    document.getElementById('ws-diagram-id').textContent = toFraction(coilID);
+
+    // Calculated/Max coil size (OD x coil length)
+    var calcODfrac = toFraction(OD);
+    var calcBfrac = toFraction(B);
+    document.getElementById('ws-calcSize').textContent = calcODfrac;
+    document.getElementById('ws-calcSize2').textContent = 'x  ' + calcBfrac;
+    var maxOD = OD + 1;
+    var maxB = B + 1;
+    document.getElementById('ws-maxSize').textContent = toFraction(maxOD);
+    document.getElementById('ws-maxSize2').textContent = 'x  ' + toFraction(maxB);
+}
+
+function populateWindingSheetAI() {
+    var coilID = getVal('coilID');
+    var numLayers = getVal('numLayers');
+    var margin = getVal('margin');
+    var turnsPerLayer = getVal('turnsPerLayer');
+    var numConductors = getVal('numConductors');
+    var condThickness = getVal('condThickness');
+    var condWidth = getVal('condWidth');
+    var condGap = getVal('condGap');
+    var materialVal = parseInt(document.getElementById('material').value);
+    var isCu = (materialVal === 1);
+    var layerIns = getVal('layerIns');
+    var numSticks = getVal('numSticks');
+    var stickThickness = getVal('stickThickness');
+    var buildFactor = getVal('buildFactor');
+    var dcAmps = getVal('dcAmps');
+    var acAmps = getVal('acAmps');
+    var targetIZ = getVal('targetIZ');
+
+    var totalTurns = numLayers * turnsPerLayer;
+    var T = (numLayers * condThickness + (numLayers - 1) * layerIns) * buildFactor + numSticks * stickThickness;
+    var OD = coilID + 2 * T;
+    var avgRadius = coilID / 2 + T / 2;
+    var MLT = avgRadius * 2 * 3.14159;
+    var B;
+    if (turnsPerLayer === 1) {
+        B = condWidth * numConductors + condGap * (numConductors - 1) + 2 * margin;
+    } else {
+        B = condWidth * turnsPerLayer * numConductors + condGap * (turnsPerLayer * numConductors - 1) + 2 * margin;
+    }
+    var condArea = condThickness * condWidth - 0.000838;
+    var condLengthFt = MLT * totalTurns / 12;
+    var weightFactor = isCu ? 3.8762 : 1.172;
+    var weight = numConductors * condArea * condLengthFt * weightFactor;
+    var R75 = isCu
+        ? condLengthFt / (numConductors * condArea) * 1e-5 * 0.81672 * ((234.5 + 75) / 254.5)
+        : condLengthFt / (numConductors * condArea) * 1e-5 * 1.3228 * ((226 + 75) / 246);
+    var wdgLength = B - 2 * margin;
+    var uH_wheeler = (0.8 * avgRadius * avgRadius * totalTurns * totalTurns) / (6 * avgRadius + 9 * wdgLength + 10 * T);
+    var mH = targetIZ / (2 * Math.PI * 60) * 1000;
+    var sticksPerLayer = Math.floor(MLT / 2.5);
+    if (sticksPerLayer < 0) sticksPerLayer = 0;
+    var totalStickCount = numSticks * sticksPerLayer;
+    var sqInPerLayer = MLT * B * 1.05;
+    var totalWrap = sqInPerLayer * numLayers * 1.05;
+    var sqInPO = MLT * B * numLayers * 2 * 1.05;
+
+    var today = new Date();
+    document.getElementById('wsai-date').textContent = (today.getMonth()+1) + '/' + today.getDate() + '/' + today.getFullYear();
+
+    document.getElementById('wsai-coilID').textContent = coilID.toFixed(3) + '"';
+    document.getElementById('wsai-coilOD').textContent = OD.toFixed(3) + '"';
+    document.getElementById('wsai-coilHeight').textContent = B.toFixed(3) + '"';
+    document.getElementById('wsai-coilThk').textContent = T.toFixed(3) + '"';
+    document.getElementById('wsai-totalTurns').textContent = totalTurns;
+    document.getElementById('wsai-numLayers').textContent = numLayers;
+    document.getElementById('wsai-turnsPerLayer').textContent = turnsPerLayer;
+    document.getElementById('wsai-margin').textContent = margin.toFixed(2) + '"';
+
+    document.getElementById('wsai-material').textContent = isCu ? 'Copper' : 'Aluminum';
+    document.getElementById('wsai-condThk').textContent = condThickness.toFixed(4) + '"';
+    document.getElementById('wsai-condWidth').textContent = condWidth.toFixed(3) + '"';
+    document.getElementById('wsai-numCond').textContent = numConductors;
+    document.getElementById('wsai-condArea').textContent = condArea.toFixed(4) + ' sq.in';
+    document.getElementById('wsai-condLength').textContent = condLengthFt.toFixed(1) + ' ft';
+    document.getElementById('wsai-condGap').textContent = condGap.toFixed(3) + '"';
+    document.getElementById('wsai-weight').textContent = weight.toFixed(1) + ' lbs';
+    document.getElementById('wsai-mlt').textContent = MLT.toFixed(2) + '"';
+
+    document.getElementById('wsai-layerIns').textContent = layerIns.toFixed(3) + '"';
+    document.getElementById('wsai-numSticks').textContent = numSticks;
+    document.getElementById('wsai-stickThk').textContent = stickThickness.toFixed(3) + '"';
+    document.getElementById('wsai-sticksPerLayer').textContent = sticksPerLayer;
+    document.getElementById('wsai-totalSticks').textContent = totalStickCount;
+    document.getElementById('wsai-buildFactor').textContent = buildFactor;
+
+    document.getElementById('wsai-wrapPerLayer').textContent = sqInPerLayer.toFixed(0) + ' sq.in';
+    document.getElementById('wsai-totalWrap').textContent = totalWrap.toFixed(0) + ' sq.in';
+    document.getElementById('wsai-totalPO').textContent = sqInPO.toFixed(0) + ' sq.in';
+
+    document.getElementById('wsai-targetIZ').textContent = targetIZ + ' \u03A9';
+    document.getElementById('wsai-inductance').textContent = uH_wheeler.toFixed(1) + ' \u00B5H';
+    document.getElementById('wsai-mH').textContent = mH.toFixed(3) + ' mH';
+    document.getElementById('wsai-dcR').textContent = (R75 * 1000).toFixed(3) + ' m\u03A9';
+    document.getElementById('wsai-hipot').textContent = '_____ kV';
+    document.getElementById('wsai-ratedAmps').textContent = (dcAmps > 0 ? dcAmps + ' DC + ' : '') + acAmps + ' AC Amps';
+
+    // Layer-by-layer table
+    var tbody = document.getElementById('wsai-layer-tbody');
+    tbody.innerHTML = '';
+    var stickInterval = numSticks > 0 ? Math.floor(numLayers / numSticks) : 0;
+    var stickLayers = [];
+    if (numSticks > 0 && stickInterval > 0) {
+        for (var s = stickInterval; s < numLayers; s += stickInterval) {
+            if (stickLayers.length < numSticks) stickLayers.push(s);
+        }
+    }
+    var cumTurns = 0;
+    var currentOD = coilID;
+    for (var layer = 1; layer <= numLayers; layer++) {
+        cumTurns += turnsPerLayer;
+        currentOD += 2 * condThickness * buildFactor;
+        if (layer > 1) currentOD += 2 * layerIns * buildFactor;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + layer + '</td>'
+            + '<td>Conductor</td>'
+            + '<td>' + turnsPerLayer + '</td>'
+            + '<td>' + cumTurns + '</td>'
+            + '<td>' + currentOD.toFixed(3) + '</td>'
+            + '<td>Layer ins.</td>'
+            + '<td style="width:60px;">\u2610</td>';
+        tbody.appendChild(tr);
+        if (stickLayers.indexOf(layer) !== -1) {
+            currentOD += 2 * stickThickness;
+            var str = document.createElement('tr');
+            str.className = 'stick-row';
+            str.innerHTML = '<td></td>'
+                + '<td>STICKS</td>'
+                + '<td>' + sticksPerLayer + ' pcs</td>'
+                + '<td></td>'
+                + '<td>' + currentOD.toFixed(3) + '</td>'
+                + '<td>' + stickThickness.toFixed(3) + '" thk</td>'
+                + '<td>\u2610</td>';
+            tbody.appendChild(str);
+        }
+    }
+}
+
+// ===== HELPER FUNCTIONS =====
+function getVal(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function fmt(v, d) { if (d === undefined) d = 4; return isFinite(v) ? v.toPrecision(d > 0 ? d : 4) : '---'; }
+function fmtF(v, d) { if (d === undefined) d = 2; return isFinite(v) ? v.toFixed(d) : '---'; }
+function fmtE(v, d) { if (d === undefined) d = 4; return isFinite(v) ? v.toExponential(d) : '---'; }
+function setText(id, val) { document.getElementById(id).textContent = val; }
+
+function toggleSection(header) {
+    header.classList.toggle('collapsed');
+    var body = header.nextElementSibling;
+    body.classList.toggle('collapsed');
+}
+
+function toggleAll(collapse) {
+    var headers = document.querySelectorAll('.section-header');
+    headers.forEach(function(header) {
+        var body = header.nextElementSibling;
+        if (collapse) {
+            header.classList.add('collapsed');
+            body.classList.add('collapsed');
+        } else {
+            header.classList.remove('collapsed');
+            body.classList.remove('collapsed');
+        }
+    });
+}
+
+// ===== DOWELL MODEL HELPERS =====
+function dowellM(Q) {
+    // M(Q) = Q * (sinh(2Q) + sin(2Q)) / (cosh(2Q) - cos(2Q))
+    var s2q = Math.sinh(2 * Q), c2q = Math.cosh(2 * Q);
+    var sin2q = Math.sin(2 * Q), cos2q = Math.cos(2 * Q);
+    var denom = c2q - cos2q;
+    if (Math.abs(denom) < 1e-30) return 1;
+    return Q * (s2q + sin2q) / denom;
+}
+
+function dowellD(Q) {
+    // D(Q) = 2 * Q * (sinh(Q) - sin(Q)) / (cosh(Q) + cos(Q))
+    var sq = Math.sinh(Q), cq = Math.cosh(Q);
+    var sinq = Math.sin(Q), cosq = Math.cos(Q);
+    var denom = cq + cosq;
+    if (Math.abs(denom) < 1e-30) return 0;
+    return 2 * Q * (sq - sinq) / denom;
+}
+
+// ===== MAIN CALCULATION =====
+function calculate() {
+    // Read inputs
+    var buildFactor = getVal('buildFactor');
+    var coilID = getVal('coilID');
+    var numLayers = getVal('numLayers');
+    var margin = getVal('margin');
+    var turnsPerLayer = getVal('turnsPerLayer');
+    var numConductors = getVal('numConductors');
+    var condThickness = getVal('condThickness');
+    var condWidth = getVal('condWidth');
+    var materialVal = parseInt(document.getElementById('material').value);
+    var isCu = (materialVal === 1);
+    var condGap = getVal('condGap');
+    var layerIns = getVal('layerIns');
+    var numSticks = getVal('numSticks');
+    var stickThickness = getVal('stickThickness');
+    var ductEff = getVal('ductEff');
+    var dcAmps = getVal('dcAmps');
+    var acAmps = getVal('acAmps');
+    var testCurrent = getVal('testCurrent');
+    var targetIZ = getVal('targetIZ');
+    var overloadCurrent = getVal('overloadCurrent');
+    var overloadSeconds = getVal('overloadSeconds');
+
+    // Material constants (from exact spreadsheet formulas)
+    var Ktemp = isCu ? 234.5 : 226;
+    // Resistivity factors: R = (Length_ft / (nCond * Area)) * 1e-5 * factor
+    var rhoFactor = isCu ? 0.81672e-5 : 1.3228e-5;
+    // Weight: LBS = nCond * Area * Length_ft * weightFactor
+    var weightFactor = isCu ? 3.8762 : 1.172; // lb/ft/sqin
+    // Skin depth: Dpen = 7.5 * dpenMaterial / sqrt(freq) / 2.54
+    var dpenMaterial = isCu ? 1.0 : 1.618;
+
+    // === GEOMETRY ===
+    // Exact formula from spreadsheet: T = ((layers*thickness + (layers-1)*layerIns) * buildFactor) + sticks*stkThk
+    var N = numLayers * turnsPerLayer;
+    var T = ((numLayers * condThickness + (numLayers - 1) * layerIns) * buildFactor) + (numSticks * stickThickness);
+    var D = coilID + T; // mean diameter
+    var OD = coilID + 2 * T;
+    // Coil length B depends on turns/layer vs layers
+    var B;
+    if (N >= numLayers) {
+        B = (condWidth * numConductors + layerIns * (numConductors - 1)) + 2 * margin;
+    } else {
+        B = (Math.floor(16 * (turnsPerLayer + 1) * condWidth * numConductors) / 16 + 0.0625)
+            + (layerIns * turnsPerLayer) + 2 * margin;
+    }
+    var BD = condWidth / D;
+    var TDratio = T / D;
+
+    setText('out-N', N);
+    setText('out-T', fmtF(T, 3));
+    setText('out-D', fmtF(D, 3));
+    setText('out-OD', fmtF(OD, 3));
+    setText('out-B', fmtF(B, 2));
+    setText('out-BD', fmtF(BD, 4));
+    setText('out-TD', fmtF(TDratio, 4));
+
+    // === CONDUCTOR ===
+    // Exact: CondArea = Thickness * Width - 0.000838
+    var condArea = (condThickness * condWidth) - 0.000838;
+    var fillFactor = Math.pow(condWidth / (condWidth + condGap), 2);
+    var A = coilID / 2 + T / 2; // mean radius = (ID + T) / 2
+    var MLT = A * 2 * 3.14159; // spreadsheet uses 3.14159, not Math.PI
+    var condLengthFt = (MLT * N) / 12;
+    // Exact weight formula: LBS = nCond * CondArea * CondLength_ft * weightFactor
+    var weight = numConductors * condArea * condLengthFt * weightFactor;
+
+    setText('out-condArea', fmtF(condArea, 3));
+    setText('out-fillFactor', fmtF(fillFactor, 5));
+    setText('out-A', fmtF(A, 3));
+    setText('out-MLT', fmtF(MLT, 3));
+    setText('out-condLength', fmtF(condLengthFt, 1));
+    setText('out-weight', fmtF(weight, 1));
+
+    // === RESISTANCE ===
+    // Exact: R = (CondLength_ft / (nCond * CondArea)) * 1e-5 * rhoFactor * tempCorrection
+    var R20 = (condLengthFt / (numConductors * condArea)) * rhoFactor * ((Ktemp + 20) / (Ktemp + 20));
+    var R75 = (condLengthFt / (numConductors * condArea)) * rhoFactor * ((Ktemp + 75) / (Ktemp + 20));
+
+    setText('out-R20', fmtE(R20, 4));
+    setText('out-R75', fmtE(R75, 4));
+
+    // === INDUCTANCE ===
+    // Wheeler: L(uH) = 0.8 * A^2 * N^2 / (6*A + 9*Bw + 10*T)
+    // A = mean radius, Bw = condWidth (winding height), T = coil thickness
+    var Bw = condWidth;
+    var wheelerUH = 0.8 * A * A * N * N / (6 * A + 9 * Bw + 10 * T);
+
+    // K-factor: exact empirical formula from spreadsheet
+    // K = (B/D) / ((1/(24.3122 - 6.791^(T/D))) * (B/D) + 0.0541 * 1.0003^(1/(T/D)) * (T/D)^0.4775)
+    var Kfactor = BD / (
+        (1 / (24.3122 - Math.pow(6.791, TDratio))) * BD +
+        0.0541 * Math.pow(1.0003, 1 / TDratio) * Math.pow(TDratio, 0.4775)
+    );
+    var kformulaUH = Kfactor * D * D * N * N * 1e-3 / Bw;
+
+    // mH nominal derived from IZ: mH = (IZ / (2*PI*60)) * 1000
+    // But first compute IZ (done below), so compute preliminary mH from Wheeler
+    var mHnom = wheelerUH / 1000;
+    var mHmin = mHnom * 0.9;
+
+    setText('out-wheelerUH', fmtF(wheelerUH, 2));
+    setText('out-kformulaUH', fmtF(kformulaUH, 2));
+    // mH Nominal is derived from IZ after impedance calc (computed below, update later)
+    setText('out-mHnom', '---');
+    setText('out-mHmin', '---');
+
+    // === IMPEDANCE ===
+    // Exact: IZ = sqrt(R_75C^2 + (L_uH * 1e-6 * 2 * PI * 60)^2) — full impedance
+    var XL60 = wheelerUH * 1e-6 * 2 * Math.PI * 60;
+    var IZ60 = Math.sqrt(R75 * R75 + XL60 * XL60);
+    var testVolts = IZ60 * testCurrent;
+    // Exact: AmpSqIn = sqrt(DC^2 + AC^2) / (nCond * CondArea)
+    var totalAmps = Math.sqrt(dcAmps * dcAmps + acAmps * acAmps);
+    var ampSqIn = totalAmps / (numConductors * condArea);
+
+    setText('out-IZ60', fmtF(IZ60, 6));
+    setText('out-targetIZ', fmtF(targetIZ, 4));
+    setText('out-testVolts', fmtF(testVolts, 2));
+    setText('out-ampSqIn', fmtF(ampSqIn, 1));
+
+    // Now update mH nominal from IZ: mH = (IZ / (2*PI*60)) * 1000
+    mHnom = (IZ60 / (2 * Math.PI * 60)) * 1000;
+    mHmin = mHnom * 0.9;
+    setText('out-mHnom', fmtF(mHnom, 4));
+    setText('out-mHmin', fmtF(mHmin, 4));
+
+    // === AC RESISTANCE & LOSSES (60Hz) ===
+    // Exact skin depth: Dpen = 7.5 * materialFactor / sqrt(freq) / 2.54
+    var f = 60;
+    var dpen60 = 7.5 * dpenMaterial / Math.sqrt(f) / 2.54;
+    var Q60 = condThickness / dpen60;
+    var M60 = dowellM(Q60);
+    var D60 = dowellD(Q60);
+    var racRdc = M60 + (numLayers * numLayers - 1) * D60 / 3;
+    // Exact I²R: R_75C * (DC² + AC²)
+    var i2r = R75 * (dcAmps * dcAmps + acAmps * acAmps);
+    // Exact Eddy formula: 5.9 * layers^2 * thickness^4 * fillFactor * I²R (Cu), /1.65 for Al
+    var eddy = 5.9 * Math.pow(numLayers, 2) * Math.pow(condThickness, 4) * fillFactor * i2r;
+    if (!isCu) eddy = eddy / 1.65;
+    var totalLoss = i2r + eddy;
+
+    setText('out-dpen60', fmtF(dpen60, 4));
+    setText('out-Q60', fmtF(Q60, 4));
+    setText('out-M60', fmtF(M60, 6));
+    setText('out-D60', fmtF(D60, 6));
+    setText('out-racRdc', fmtF(racRdc, 4));
+    setText('out-i2r', fmtF(i2r, 1));
+    setText('out-eddy', fmtF(eddy, 1));
+    setText('out-totalLoss', fmtF(totalLoss, 1));
+
+    // === THERMAL ===
+    // Exact surface formulas from spreadsheet:
+    // Annular area (top+bottom) = 2 * pi * ((T + ID/2)^2 - (ID/2)^2)
+    var annularArea = 2 * 3.14159 * (Math.pow(T + coilID / 2, 2) - Math.pow(coilID / 2, 2));
+    // Surface with ducts = annularArea + MLT * Bwinding * (2 + 2*sticks) * ductEff
+    var saDuct = annularArea + (MLT * condWidth * (2 + numSticks * 2) * ductEff);
+    // Surface external only = annularArea + MLT * Bwinding * 2
+    var saExt = annularArea + (MLT * condWidth * 2);
+    var wSqInDuct = totalLoss / saDuct;
+    var wSqInExt = totalLoss / saExt;
+    // Exact: Temp Rise = 75 * (W/SqIn)^0.8
+    var tempRiseDuct = 75 * Math.pow(wSqInDuct, 0.8);
+    var tempRiseExt = 75 * Math.pow(wSqInExt, 0.8);
+
+    setText('out-saExt', fmtF(saExt, 0));
+    setText('out-saDuct', fmtF(saDuct, 0));
+    setText('out-wSqInDuct', fmtF(wSqInDuct, 5));
+    setText('out-wSqInExt', fmtF(wSqInExt, 5));
+    setText('out-tempRiseDuct', fmtF(tempRiseDuct, 2));
+    setText('out-tempRiseExt', fmtF(tempRiseExt, 2));
+
+    // === OVERLOAD / FAULT ===
+    // Exact: Fault watts = Total_watts * (Fault_I / (AC_Amps + DC_Amps))^2
+    var totalCurrentOp = acAmps + dcAmps;
+    var faultW = totalCurrentOp > 0 ? totalLoss * Math.pow(overloadCurrent / totalCurrentOp, 2) : 0;
+    var faultWSqIn = faultW / saDuct;
+    // Exact: Fault/SQI = Fault_I / (nCond * CondArea)
+    var faultASqIn = overloadCurrent / (numConductors * condArea);
+
+    // Exact overload temp rise formula from spreadsheet:
+    // = ((Fault_W/sqin^0.8 * 75) * seconds / 3600) + Temp_Rise_operating
+    var overloadTR = (Math.pow(faultWSqIn, 0.8) * 75 * overloadSeconds / 3600) + tempRiseDuct;
+
+    // Adiabatic temp rise: all fault energy stays in conductor (zero heat loss)
+    // = (Fault_Watts * seconds) / (weight_lbs * 453.592 g/lb * Cp) + operating temp rise
+    // Cp: Cu = 0.385 J/(g·°C), Al = 0.897 J/(g·°C)
+    var specificHeat = isCu ? 0.385 : 0.897;
+    var adiabaticTR = weight > 0 ? (faultW * overloadSeconds / (weight * 453.592 * specificHeat)) + tempRiseDuct : 0;
+
+    setText('out-faultW', fmtE(faultW, 3));
+    setText('out-faultWSqIn', fmtF(faultWSqIn, 3));
+    setText('out-faultASqIn', fmtF(faultASqIn, 1));
+    setText('out-overloadTR', fmtF(overloadTR, 2));
+    setText('out-adiabaticTR', fmtF(adiabaticTR, 2));
+
+    // === FREQUENCY SWEEP TABLE ===
+    var freqs = [100, 420, 500, 1000, 2000, 10000, 20000];
+    var tbody = document.getElementById('freq-tbody');
+    tbody.innerHTML = '';
+    for (var i = 0; i < freqs.length; i++) {
+        var ff = freqs[i];
+        var dp = 7.5 * dpenMaterial / Math.sqrt(ff) / 2.54;
+        var qq = condThickness / dp;
+        var mm = dowellM(qq);
+        var dd = dowellD(qq);
+        var rr = mm + (numLayers * numLayers - 1) * dd / 3;
+        var acOhms = rr * R75;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + ff + '</td>'
+            + '<td>' + fmtF(dp, 4) + '</td>'
+            + '<td>' + fmtF(qq, 4) + '</td>'
+            + '<td>' + fmtF(mm, 4) + '</td>'
+            + '<td>' + fmtF(dd, 4) + '</td>'
+            + '<td>' + fmtF(rr, 4) + '</td>'
+            + '<td>' + fmtE(acOhms, 4) + '</td>';
+        tbody.appendChild(tr);
+    }
+
+    // === BILL OF MATERIALS ===
+    var sticksPerLayer = Math.floor((B - 2 * 2.5) / 2.5);
+    if (sticksPerLayer < 0) sticksPerLayer = 0;
+    var totalSticks = numSticks * sticksPerLayer;
+    var sqInPerLayer = MLT * B * 1.05;
+    var totalWrap = sqInPerLayer * numLayers * 1.05;
+    var sqInPO = MLT * B * numLayers * 2 * 1.05;
+
+    setText('out-sticksPerLayer', sticksPerLayer);
+    setText('out-totalSticks', totalSticks);
+    setText('out-sqInPerLayer', fmtF(sqInPerLayer, 0));
+    setText('out-totalWrap', fmtF(totalWrap, 0));
+    setText('out-sqInPO', fmtF(sqInPO, 0));
+}
+
+// ===== WIRE UP LIVE RECALCULATION =====
+(function() {
+    var inputs = document.querySelectorAll('.input-panel input, .input-panel select');
+    for (var i = 0; i < inputs.length; i++) {
+        inputs[i].addEventListener('input', function() { calculate(); if (document.getElementById('tab-ws-existing').style.display !== 'none') populateWindingSheet(); if (document.getElementById('tab-ws-ai').style.display !== 'none') populateWindingSheetAI(); });
+        inputs[i].addEventListener('change', function() { calculate(); if (document.getElementById('tab-ws-existing').style.display !== 'none') populateWindingSheet(); if (document.getElementById('tab-ws-ai').style.display !== 'none') populateWindingSheetAI(); });
+    }
+    // Pre-load existing design sheets as saved models (only if not already in localStorage)
+    (function preloadDesigns() {
+        var designs = getDesigns();
+        var preloaded = {
+            "800837 - 3.5mH 87A Neutral Grounding": {
+                buildFactor: "1.14", coilID: "3.875", numLayers: "17", margin: "5.375",
+                turnsPerLayer: "11", numConductors: "2", condThickness: "0.114",
+                condWidth: "0.258", material: "copper", condGap: "0.008",
+                layerIns: "0.015", numSticks: "3", stickThickness: "0.375",
+                ductEff: "0.8", dcAmps: "0", acAmps: "87", testCurrent: "87",
+                targetIZ: "1.3195", overloadCurrent: "978", overloadSeconds: "10"
+            },
+            "800838 - 199mH 12A (7 Sq Cu Wire)": {
+                buildFactor: "1.11", coilID: "9.75", numLayers: "12", margin: "5.25",
+                turnsPerLayer: "90", numConductors: "1", condThickness: "0.1507",
+                condWidth: "0.1507", material: "copper", condGap: "0",
+                layerIns: "0.045", numSticks: "1", stickThickness: "0.375",
+                ductEff: "0.8", dcAmps: "0", acAmps: "12", testCurrent: "12",
+                targetIZ: "75", overloadCurrent: "400", overloadSeconds: "10"
+            },
+            "800839 - 2.9mH 600A Aluminum Foil": {
+                buildFactor: "1.11", coilID: "12", numLayers: "118", margin: "6",
+                turnsPerLayer: "1", numConductors: "1", condThickness: "0.03",
+                condWidth: "24", material: "aluminum", condGap: "0.01",
+                layerIns: "0.01", numSticks: "4", stickThickness: "0.5",
+                ductEff: "0.8", dcAmps: "0", acAmps: "600", testCurrent: "600",
+                targetIZ: "0.2", overloadCurrent: "10000", overloadSeconds: "2"
+            },
+            "800840 - 106mH 320A Copper Foil": {
+                buildFactor: "1.11", coilID: "5.625", numLayers: "118", margin: "2.75",
+                turnsPerLayer: "1", numConductors: "1", condThickness: "0.02",
+                condWidth: "11", material: "copper", condGap: "0",
+                layerIns: "0.01", numSticks: "2", stickThickness: "0.5",
+                ductEff: "0.9", dcAmps: "0", acAmps: "320", testCurrent: "320",
+                targetIZ: "0.2", overloadCurrent: "320", overloadSeconds: "10"
+            }
+        };
+        var added = false;
+        for (var name in preloaded) {
+            if (!designs[name]) {
+                designs[name] = preloaded[name];
+                added = true;
+            }
+        }
+        if (added) {
+            localStorage.setItem('reactor-designs', JSON.stringify(designs));
+        }
+    })();
+
+    calculate();
+    updateDesignCount();
+})();
+</script>
+
+</body>
+</html>
